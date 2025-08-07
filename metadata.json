@@ -1,6 +1,6 @@
 {
   "name": "DIGIeTAL ART GALLERY",
-  "description": "A web application to browse and order artwork from a virtual gallery.",
+  "description": "A web application to browse and order artwork from a virtual gallery, featuring AI-powered art critiques.",
   "requestFramePermissions": [],
   "prompt": ""
 }

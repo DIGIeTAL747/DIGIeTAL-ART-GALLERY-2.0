@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
+import { GoogleGenAI } from "@google/genai";
+import type { GenerateContentResponse } from "@google/genai";
+
 
 // --- MOCK DATA ---
 const mockArtworks = [
@@ -125,6 +128,64 @@ const ArtworkList = ({ artworks, onSelectArtwork }) => {
 };
 
 const ArtworkDetail = ({ artwork, onPlaceOrder, onBack }) => {
+  const [critique, setCritique] = useState('');
+  const [isLoadingCritique, setIsLoadingCritique] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleGetCritique = async () => {
+    if (!process.env.API_KEY) {
+      setError("API key is not set. Please configure it in your environment.");
+      return;
+    }
+
+    setIsLoadingCritique(true);
+    setError('');
+    setCritique('');
+
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      
+      // Fetch the image from the URL and convert it to a base64 string
+      const imageResponse = await fetch(artwork.imageUrl);
+      if (!imageResponse.ok) {
+          throw new Error(`Failed to fetch image: ${imageResponse.statusText}`);
+      }
+      const blob = await imageResponse.blob();
+      
+      const base64data = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(String(reader.result).split(',')[1]);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+      });
+
+      const imagePart = {
+          inlineData: {
+            mimeType: blob.type,
+            data: base64data,
+          },
+      };
+
+      const textPart = {
+        text: `You are an eloquent and insightful art critic. Provide a short, one-paragraph critique of this painting titled "${artwork.title}" by ${artwork.artist}. Focus on the mood, technique, and emotional impact.`,
+      };
+
+      const response: GenerateContentResponse = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: { parts: [imagePart, textPart] },
+      });
+      
+      setCritique(response.text);
+
+    } catch (e) {
+      console.error(e);
+      setError('Could not generate a critique at this time. Please try again later.');
+    } finally {
+      setIsLoadingCritique(false);
+    }
+  };
+
+
   return (
     <div className="artwork-detail">
       <button onClick={onBack} className="back-button">&larr; Back to Gallery</button>
@@ -133,7 +194,19 @@ const ArtworkDetail = ({ artwork, onPlaceOrder, onBack }) => {
       <p className="artist">by {artwork.artist}</p>
       <p className="description">{artwork.description}</p>
       <p className="price">${parseInt(artwork.price).toLocaleString()}</p>
-      <button onClick={onPlaceOrder}>Order This Artwork</button>
+      <div className="actions">
+        <button onClick={onPlaceOrder}>Order This Artwork</button>
+        <button onClick={handleGetCritique} disabled={isLoadingCritique} className="ai-critique-button">
+          Get AI Critique
+        </button>
+      </div>
+      {(isLoadingCritique || critique || error) && (
+        <div className="critique-container">
+          {isLoadingCritique && <div className="critique-loader"></div>}
+          {critique && <p>{critique}</p>}
+          {error && <p className="error-text">{error}</p>}
+        </div>
+      )}
     </div>
   );
 };
