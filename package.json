@@ -1,0 +1,9 @@
+{
+  "name": "digietal-art-gallery",
+  "version": "1.0.0",
+  "description": "A web application to browse and order artwork from a virtual gallery.",
+  "private": true,
+  "scripts": {
+    "build": "echo 'Build not required for this project, deploying static files.'"
+  }
+}
