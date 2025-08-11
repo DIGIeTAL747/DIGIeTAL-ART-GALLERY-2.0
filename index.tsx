@@ -2,10 +2,107 @@ import React, { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { GoogleGenAI } from "@google/genai";
 import type { GenerateContentResponse } from "@google/genai";
-import { mockArtworks } from './data';
 
 // --- MOCK DATA ---
-// Data has been moved to data.ts
+const mockArtworks = [
+  {
+    id: '1',
+    title: 'Aloe Vera',
+    artist: 'Diony Villamor Jr',
+    description: '66 in. x 80 in.',
+    price: '500',
+    imageUrl: 'https://i.imgur.com/U35hBPZ.jpeg',
+  },
+  {
+    id: '2',
+    title: 'Courtyard',
+    artist: 'Diony Villamor Jr',
+    description: '66 in. x 80 in.',
+    price: '500',
+    imageUrl: 'https://i.imgur.com/hzsqdnU.jpeg',
+  },
+  {
+    id: '3',
+    title: 'Bird’s Nest Fern',
+    artist: 'Diony Villamor Jr',
+    description: '66 in. x 80 in.',
+    price: '500',
+    imageUrl: 'https://i.imgur.com/PZCMO07.jpeg',
+  },
+    {
+    id: '4',
+    title: 'Dead Trunk',
+    artist: 'Diony Villamor Jr',
+    description: '66 in. x 80 in',
+    price: '500',
+    imageUrl: 'https://i.imgur.com/ooMgBuu.jpeg',
+  },
+  {
+    id: '5',
+    title: 'Taro',
+    artist: 'Diony Villamor Jr',
+    description: '66 in. x 80 in',
+    price: '500',
+    imageUrl: 'https://i.imgur.com/EfyQ2OG.jpeg',
+  },
+  {
+    id: '6',
+    title: 'Mango',
+    artist: 'Diony Villamor Jr',
+    description: '66 in. x 80 in.',
+    price: '500',
+    imageUrl: 'https://i.imgur.com/OCGZjoO.jpeg',
+  },
+{
+    id: '7',
+    title: 'Walis Tingting',
+    artist: 'Diony Villamor Jr',
+    description: '66 in. x 80 in.',
+    price: '500',
+    imageUrl: 'https://i.imgur.com/IvFpyeG.jpeg',
+  },
+  {
+    id: '8',
+    title: 'Aloe Vera Pots',
+    artist: 'Diony Villamor Jr',
+    description: '66 in. x 80 in.',
+    price: '500',
+    imageUrl: 'https://i.imgur.com/WDOxaza.jpeg',
+  },
+{
+    id: '9',
+    title: 'Gripo',
+    artist: 'Diony Villamor Jr',
+    description: '66 in. x 80 in.',
+    price: '500',
+    imageUrl: 'https://i.imgur.com/Xm3DXQ3.jpeg',
+  },
+
+  {
+    id: '10',
+    title: 'Life Thru Cracks',
+    artist: 'Diony Villamor Jr',
+    description: '66 in. x 80 in.',
+    price: '500',
+    imageUrl: 'https://i.imgur.com/aD9KH1z.jpeg',
+  },
+{
+    id: '11',
+    title: 'Jesse',
+    artist: 'Diony Villamor Jr',
+    description: '66 in. x 80 in.',
+    price: '500',
+    imageUrl: 'https://i.imgur.com/5RZWhB3.jpeg',
+  },
+  {
+    id: '12',
+    title: 'Diony',
+    artist: 'Diony Villamor Jr',
+    description: '66 in. x 80 in.',
+    price: '500',
+    imageUrl: 'https://i.imgur.com/feRPvRt.jpeg',
+  }
+];
 
 // --- COMPONENTS ---
 
