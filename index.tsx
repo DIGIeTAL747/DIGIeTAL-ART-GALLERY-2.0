@@ -4,7 +4,6 @@ import { GoogleGenAI } from "@google/genai";
 import type { GenerateContentResponse } from "@google/genai";
 import { mockArtworks } from './data';
 
-
 // --- MOCK DATA ---
 // Data has been moved to data.ts
 
@@ -21,7 +20,7 @@ const ArtworkList = ({ artworks, onSelectArtwork }) => {
             <div className="artwork-card-info">
                 <h3>{artwork.title}</h3>
                 <p className="artist">by {artwork.artist}</p>
-                <p className="price">${artwork.price.toLocaleString()}</p>
+                <p className="price">${parseInt(artwork.price).toLocaleString()}</p>
             </div>
           </div>
         ))}
@@ -48,12 +47,8 @@ const ArtworkDetail = ({ artwork, onPlaceOrder, onBack }) => {
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       
-      // Using a proxy to bypass potential CORS issues when fetching images from another domain.
-      const proxyUrl = 'https://corsproxy.io/?';
-      const proxiedImageUrl = `${proxyUrl}${encodeURIComponent(artwork.imageUrl)}`;
-
       // Fetch the image from the URL and convert it to a base64 string
-      const imageResponse = await fetch(proxiedImageUrl);
+      const imageResponse = await fetch(artwork.imageUrl);
       if (!imageResponse.ok) {
           throw new Error(`Failed to fetch image: ${imageResponse.statusText}`);
       }
@@ -74,7 +69,7 @@ const ArtworkDetail = ({ artwork, onPlaceOrder, onBack }) => {
       };
 
       const textPart = {
-        text: `You are an eloquent and insightful art critic. The artwork is described as: "${artwork.description}". Provide a short, one-paragraph critique of this painting titled "${artwork.title}" by ${artwork.artist}. Focus on the mood, technique, and emotional impact.`,
+        text: `You are an eloquent and insightful art critic. Provide a short, one-paragraph critique of this painting titled "${artwork.title}" by ${artwork.artist}. Focus on the mood, technique, and emotional impact.`,
       };
 
       const response: GenerateContentResponse = await ai.models.generateContent({
@@ -92,7 +87,6 @@ const ArtworkDetail = ({ artwork, onPlaceOrder, onBack }) => {
     }
   };
 
-
   return (
     <div className="artwork-detail">
       <button onClick={onBack} className="back-button">&larr; Back to Gallery</button>
@@ -100,8 +94,7 @@ const ArtworkDetail = ({ artwork, onPlaceOrder, onBack }) => {
       <h2>{artwork.title}</h2>
       <p className="artist">by {artwork.artist}</p>
       <p className="description">{artwork.description}</p>
-      <p className="dimensions">Dimensions: {artwork.dimensions}</p>
-      <p className="price">${artwork.price.toLocaleString()}</p>
+      <p className="price">${parseInt(artwork.price).toLocaleString()}</p>
       <div className="actions">
         <button onClick={onPlaceOrder}>Order This Artwork</button>
         <button onClick={handleGetCritique} disabled={isLoadingCritique} className="ai-critique-button">
