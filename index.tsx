@@ -21,7 +21,7 @@ const ArtworkList = ({ artworks, onSelectArtwork }) => {
             <div className="artwork-card-info">
                 <h3>{artwork.title}</h3>
                 <p className="artist">by {artwork.artist}</p>
-                <p className="price">${parseInt(artwork.price).toLocaleString()}</p>
+                <p className="price">${artwork.price.toLocaleString()}</p>
             </div>
           </div>
         ))}
@@ -74,7 +74,7 @@ const ArtworkDetail = ({ artwork, onPlaceOrder, onBack }) => {
       };
 
       const textPart = {
-        text: `You are an eloquent and insightful art critic. Provide a short, one-paragraph critique of this painting titled "${artwork.title}" by ${artwork.artist}. Focus on the mood, technique, and emotional impact.`,
+        text: `You are an eloquent and insightful art critic. The artwork is described as: "${artwork.description}". Provide a short, one-paragraph critique of this painting titled "${artwork.title}" by ${artwork.artist}. Focus on the mood, technique, and emotional impact.`,
       };
 
       const response: GenerateContentResponse = await ai.models.generateContent({
@@ -100,7 +100,8 @@ const ArtworkDetail = ({ artwork, onPlaceOrder, onBack }) => {
       <h2>{artwork.title}</h2>
       <p className="artist">by {artwork.artist}</p>
       <p className="description">{artwork.description}</p>
-      <p className="price">${parseInt(artwork.price).toLocaleString()}</p>
+      <p className="dimensions">Dimensions: {artwork.dimensions}</p>
+      <p className="price">${artwork.price.toLocaleString()}</p>
       <div className="actions">
         <button onClick={onPlaceOrder}>Order This Artwork</button>
         <button onClick={handleGetCritique} disabled={isLoadingCritique} className="ai-critique-button">
