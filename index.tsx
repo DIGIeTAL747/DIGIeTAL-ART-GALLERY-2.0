@@ -2,108 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { GoogleGenAI } from "@google/genai";
 import type { GenerateContentResponse } from "@google/genai";
+import { mockArtworks } from './data';
 
 
 // --- MOCK DATA ---
-const mockArtworks = [
-  {
-    id: '1',
-    title: 'Solitude',
-    artist: 'Gigi Yulo-Villamor',
-    description: 'Watercolor 10in x 15in',
-    price: '5000',
-    imageUrl: 'https://i.imgur.com/ycoy2jW.jpeg',
-  },
-  {
-    id: '2',
-    title: 'Sinadya',
-    artist: 'Gigi Yulo-Villamor',
-    description: 'Acrylic; 18in x 20in',
-    price: '5000',
-    imageUrl: 'https://i.imgur.com/kwUduxc.jpeg',
-  },
-  {
-    id: '3',
-    title: 'Crazy Y Ranch',
-    artist: 'Gigi Yulo-Villamor',
-    description: 'Gouache',
-    price: '5000',
-    imageUrl: 'https://i.imgur.com/ipoGrcZ.jpeg',
-  },
-    {
-    id: '4',
-    title: 'Gilded Night',
-    artist: 'Gigi Yulo-Villamor',
-    description: 'Acrylic 16in x 20in',
-    price: '5000',
-    imageUrl: 'https://i.imgur.com/YfPhQp1.jpeg',
-  },
-  {
-    id: '5',
-    title: 'Inasal',
-    artist: 'Gigi Yulo-Villamor',
-    description: 'acrylic on chopping board',
-    price: '5000',
-    imageUrl: 'https://i.imgur.com/GKHyZwH.jpeg',
-  },
-  {
-    id: '6',
-    title: 'Teresita',
-    artist: 'Gigi Yulo-Villamor',
-    description: 'Acrylic 18in x 24in',
-    price: '5000',
-    imageUrl: 'https://i.imgur.com/Tvf2KAt.jpeg',
-  },
-{
-    id: '7',
-    title: 'Sunset at PeacePond',
-    artist: 'Gigi Yulo-Villamor',
-    description: 'Acrylic 14in x 16in',
-    price: '5000',
-    imageUrl: 'https://i.imgur.com/t6ZfoEz.jpeg',
-  },
-  {
-    id: '8',
-    title: 'Sapphire Bird',
-    artist: 'Gigi Yulo-Villamor',
-    description: 'Colored pencils on kraft',
-    price: '5000',
-    imageUrl: 'https://i.imgur.com/XQ2WIN8.jpeg',
-  },
-{
-    id: '9',
-    title: 'Still Life Floral',
-    artist: 'Gigi Yulo-Villamor',
-    description: '9in x 5in',
-    price: '5000',
-    imageUrl: 'https://i.imgur.com/XX976gx.jpeg',
-  },
-
-  {
-    id: '10',
-    title: 'Tree Series #3',
-    artist: 'Gigi Yulo-Villamor',
-    description: '14in x 9in',
-    price: '5000',
-    imageUrl: 'https://i.imgur.com/VcL8Yrs.jpeg',
-  },
-{
-    id: '11',
-    title: 'Violet',
-    artist: 'Gigi Yulo-Villamor',
-    description: '9in x 12in',
-    price: '5000',
-    imageUrl: 'https://i.imgur.com/XAu3oM5.jpeg',
-  },
-  {
-    id: '12',
-    title: 'Saffron Whispers',
-    artist: 'Gigi Yulo-Villamor',
-    description: 'Acrylic 18in x 24in',
-    price: '5000',
-    imageUrl: 'https://i.imgur.com/ipoGrcZ.jpeg',
-  }
-];
+// Data has been moved to data.ts
 
 // --- COMPONENTS ---
 
@@ -145,14 +48,18 @@ const ArtworkDetail = ({ artwork, onPlaceOrder, onBack }) => {
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       
+      // Using a proxy to bypass potential CORS issues when fetching images from another domain.
+      const proxyUrl = 'https://api.allorigins.win/raw?url=';
+      const proxiedImageUrl = `${proxyUrl}${encodeURIComponent(artwork.imageUrl)}`;
+
       // Fetch the image from the URL and convert it to a base64 string
-      const imageResponse = await fetch(artwork.imageUrl);
+      const imageResponse = await fetch(proxiedImageUrl);
       if (!imageResponse.ok) {
           throw new Error(`Failed to fetch image: ${imageResponse.statusText}`);
       }
       const blob = await imageResponse.blob();
       
-      const base64data = await new Promise((resolve, reject) => {
+      const base64data = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
           reader.onloadend = () => resolve(String(reader.result).split(',')[1]);
           reader.onerror = reject;
@@ -172,7 +79,7 @@ const ArtworkDetail = ({ artwork, onPlaceOrder, onBack }) => {
 
       const response: GenerateContentResponse = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
-        contents: { parts: [imagePart, textPart] },
+        contents: [{ parts: [imagePart, textPart] }],
       });
       
       setCritique(response.text);
