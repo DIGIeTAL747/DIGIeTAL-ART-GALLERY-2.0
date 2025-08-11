@@ -49,7 +49,7 @@ const ArtworkDetail = ({ artwork, onPlaceOrder, onBack }) => {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       
       // Using a proxy to bypass potential CORS issues when fetching images from another domain.
-      const proxyUrl = 'https://api.allorigins.win/raw?url=';
+      const proxyUrl = 'https://corsproxy.io/?';
       const proxiedImageUrl = `${proxyUrl}${encodeURIComponent(artwork.imageUrl)}`;
 
       // Fetch the image from the URL and convert it to a base64 string
