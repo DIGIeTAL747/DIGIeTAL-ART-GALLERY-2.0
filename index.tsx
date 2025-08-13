@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
-import type { GenerateContentResponse } from "@google/genai";
 
 // Data moved from data.ts to resolve browser import issue
 interface Artwork {
@@ -145,52 +144,68 @@ const ArtworkDetail = ({ artwork, onPlaceOrder, onBack }: { artwork: Artwork, on
     setError('');
     setCritique('');
 
+    const apiKey = process.env.API_KEY;
+    if (!apiKey) {
+      setError('API key is not configured. This feature is currently disabled.');
+      setIsLoadingCritique(false);
+      return;
+    }
+
     try {
-      const { GoogleGenAI } = await import('@google/genai');
-      
-      const apiKey = process.env.API_KEY;
-      if (!apiKey) {
-        setError('API key is not configured. This feature is currently disabled.');
-        setIsLoadingCritique(false);
-        return;
-      }
-      
-      const ai = new GoogleGenAI({ apiKey: apiKey });
-      
       const imageResponse = await fetch(artwork.imageUrl);
       if (!imageResponse.ok) {
-          throw new Error(`Failed to fetch image: ${imageResponse.statusText}`);
+        throw new Error(`Failed to fetch image: ${imageResponse.statusText}`);
       }
       const blob = await imageResponse.blob();
-      
+
       const base64data = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(String(reader.result).split(',')[1]);
-          reader.onerror = reject;
-          reader.readAsDataURL(blob);
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(String(reader.result).split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
       });
 
-      const imagePart = {
-          inlineData: {
-            mimeType: blob.type,
-            data: base64data,
-          },
+      const requestBody = {
+        contents: [{
+          parts: [
+            { text: `You are an eloquent and insightful art critic. Provide a short, one-paragraph critique of this painting titled "${artwork.title}" by ${artwork.artist}. Focus on the mood, technique, and emotional impact.` },
+            {
+              inlineData: {
+                mimeType: blob.type,
+                data: base64data,
+              },
+            },
+          ],
+        }],
       };
 
-      const textPart = {
-        text: `You are an eloquent and insightful art critic. Provide a short, one-paragraph critique of this painting titled "${artwork.title}" by ${artwork.artist}. Focus on the mood, technique, and emotional impact.`,
-      };
-
-      const response: GenerateContentResponse = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: [{ parts: [imagePart, textPart] }],
-      });
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
       
-      setCritique(response.text);
+      const apiResponse = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!apiResponse.ok) {
+        const errorData = await apiResponse.json();
+        throw new Error(errorData.error?.message || 'Failed to get critique from API.');
+      }
+
+      const responseData = await apiResponse.json();
+      const text = responseData?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+      if (!text) {
+        throw new Error('Received an empty response from the AI.');
+      }
+      
+      setCritique(text);
 
     } catch (e) {
       console.error(e);
-      setError('Could not generate a critique at this time. Please try again later.');
+      setError(e.message || 'Could not generate a critique at this time. Please try again later.');
     } finally {
       setIsLoadingCritique(false);
     }
