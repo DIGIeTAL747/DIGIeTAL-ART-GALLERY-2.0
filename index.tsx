@@ -144,7 +144,6 @@ const ArtworkDetail = ({ artwork, onPlaceOrder, onBack }) => {
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       
-      // Fetch the image from the URL and convert it to a base64 string
       const imageResponse = await fetch(artwork.imageUrl);
       if (!imageResponse.ok) {
           throw new Error(`Failed to fetch image: ${imageResponse.statusText}`);
@@ -257,43 +256,170 @@ const OrderConfirmation = ({ onBackToHome }) => {
   );
 };
 
+const ArtworkFormModal = ({ artwork, onSave, onCancel }) => {
+  const [formData, setFormData] = useState({
+    title: '',
+    artist: '',
+    description: '',
+    price: '',
+    imageUrl: '',
+  });
+  const [imagePreview, setImagePreview] = useState('');
+
+  useEffect(() => {
+    if (artwork) {
+      setFormData(artwork);
+      setImagePreview(artwork.imageUrl);
+    } else {
+      setFormData({ title: '', artist: '', description: '', price: '', imageUrl: '' });
+      setImagePreview('');
+    }
+  }, [artwork]);
+
+  const handleChange = (e) => {
+    const { id, value } = e.target;
+    setFormData({ ...formData, [id]: value });
+  };
+  
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        setImagePreview(result);
+        setFormData({ ...formData, imageUrl: result });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!formData.title || !formData.artist || !formData.price || !formData.imageUrl) {
+        alert("Please fill out all fields and upload an image.");
+        return;
+    }
+    onSave({ ...formData, id: artwork?.id || crypto.randomUUID() });
+  };
+
+  return (
+    <div className="modal-backdrop" onClick={onCancel}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2>{artwork ? 'Edit Artwork' : 'Add New Artwork'}</h2>
+          <button onClick={onCancel} className="close-button">&times;</button>
+        </div>
+        <form onSubmit={handleSubmit} noValidate className="modal-form">
+          <label htmlFor="title">Title:</label>
+          <input id="title" type="text" value={formData.title} onChange={handleChange} required />
+          
+          <label htmlFor="artist">Artist:</label>
+          <input id="artist" type="text" value={formData.artist} onChange={handleChange} required />
+          
+          <label htmlFor="description">Description:</label>
+          <textarea id="description" value={formData.description} onChange={handleChange} />
+
+          <label htmlFor="price">Price ($):</label>
+          <input id="price" type="number" value={formData.price} onChange={handleChange} required />
+          
+          <label htmlFor="imageUpload">Artwork Image:</label>
+          <input id="imageUpload" type="file" accept="image/*" onChange={handleFileChange} />
+          {imagePreview && <img src={imagePreview} alt="Preview" className="form-image-preview" />}
+
+          <div className="modal-footer">
+            <button type="button" onClick={onCancel} className="cancel-btn">Cancel</button>
+            <button type="submit">{artwork ? 'Save Changes' : 'Add Artwork'}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+
+const AdminPanel = ({ artworks, onAdd, onEdit, onDelete }) => {
+    return (
+        <div className="admin-panel">
+            <div className="admin-header">
+                <h2>Manage Artworks</h2>
+                <button onClick={onAdd}>+ Add New Artwork</button>
+            </div>
+            <div className="admin-list">
+                {artworks.map(artwork => (
+                    <div key={artwork.id} className="admin-list-item">
+                        <img src={artwork.imageUrl} alt={artwork.title} className="admin-list-item-img" />
+                        <div className="admin-list-item-info">
+                            <h3>{artwork.title}</h3>
+                            <p>by {artwork.artist}</p>
+                        </div>
+                        <div className="admin-list-item-actions">
+                            <button onClick={() => onEdit(artwork)} className="edit-btn">Edit</button>
+                            <button onClick={() => onDelete(artwork.id)} className="delete-btn">Delete</button>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+
 function App() {
   const [artworks, setArtworks] = useState([]);
   const [selectedArtwork,  setSelectedArtwork] = useState(null);
-  const [currentView, setCurrentView] = useState('artworkList');
+  const [appState, setAppState] = useState('galleryList'); // galleryList, galleryDetail, orderForm, orderConfirmation
+  const [viewMode, setViewMode] = useState('gallery'); // gallery, admin
   const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingArtwork, setEditingArtwork] = useState(null);
 
-  // Simulate fetching data
   useEffect(() => {
     setLoading(true);
-    // Simulate network delay
     setTimeout(() => {
-      setArtworks(mockArtworks);
+      try {
+        const storedArtworks = localStorage.getItem('artworks');
+        if (storedArtworks) {
+          setArtworks(JSON.parse(storedArtworks));
+        } else {
+          setArtworks(mockArtworks);
+          localStorage.setItem('artworks', JSON.stringify(mockArtworks));
+        }
+      } catch (error) {
+        console.error("Could not parse artworks from localStorage", error);
+        setArtworks(mockArtworks);
+      }
       setLoading(false);
     }, 1000);
   }, []);
 
+  const updateAndStoreArtworks = (newArtworks) => {
+    setArtworks(newArtworks);
+    localStorage.setItem('artworks', JSON.stringify(newArtworks));
+  };
+  
   const handleSelectArtwork = (artwork) => {
     setSelectedArtwork(artwork);
-    setCurrentView('artworkDetail');
+    setAppState('galleryDetail');
   };
 
   const handleBackToList = () => {
       setSelectedArtwork(null);
-      setCurrentView('artworkList');
+      setAppState('galleryList');
   }
   
   const handleBackToDetail = () => {
-      setCurrentView('artworkDetail');
+      setAppState('galleryDetail');
   }
 
   const handlePlaceOrderClick = () => {
-    setCurrentView('orderForm');
+    setAppState('orderForm');
   };
   
   const handleBackToHome = () => {
       setSelectedArtwork(null);
-      setCurrentView('artworkList');
+      setAppState('galleryList');
+      setViewMode('gallery');
   }
 
   const handleSubmitOrder = (orderDetails) => {
@@ -303,7 +429,37 @@ function App() {
         artworkTitle: selectedArtwork.title,
         orderDate: new Date(),
     });
-    setCurrentView('orderConfirmation');
+    setAppState('orderConfirmation');
+  };
+
+  const handleAddArtwork = () => {
+    setEditingArtwork(null);
+    setIsModalOpen(true);
+  };
+  
+  const handleEditArtwork = (artwork) => {
+    setEditingArtwork(artwork);
+    setIsModalOpen(true);
+  };
+  
+  const handleDeleteArtwork = (artworkId) => {
+    if (window.confirm("Are you sure you want to delete this artwork?")) {
+        const updatedArtworks = artworks.filter(a => a.id !== artworkId);
+        updateAndStoreArtworks(updatedArtworks);
+    }
+  };
+  
+  const handleSaveArtwork = (artworkToSave) => {
+    const index = artworks.findIndex(a => a.id === artworkToSave.id);
+    if (index > -1) {
+        const updatedArtworks = [...artworks];
+        updatedArtworks[index] = artworkToSave;
+        updateAndStoreArtworks(updatedArtworks);
+    } else {
+        updateAndStoreArtworks([artworkToSave, ...artworks]);
+    }
+    setIsModalOpen(false);
+    setEditingArtwork(null);
   };
 
   if (loading) {
@@ -313,12 +469,12 @@ function App() {
         </div>
     );
   }
-
-  const renderView = () => {
-    switch (currentView) {
-      case 'artworkList':
+  
+  const renderGalleryView = () => {
+    switch (appState) {
+      case 'galleryList':
         return <ArtworkList artworks={artworks} onSelectArtwork={handleSelectArtwork} />;
-      case 'artworkDetail':
+      case 'galleryDetail':
         return <ArtworkDetail artwork={selectedArtwork} onPlaceOrder={handlePlaceOrderClick} onBack={handleBackToList} />;
       case 'orderForm':
         return <OrderForm artwork={selectedArtwork} onSubmitOrder={handleSubmitOrder} onBack={handleBackToDetail} />;
@@ -333,10 +489,15 @@ function App() {
     <>
       <header className="main-header">
         <h1>DIGIeTAL ART GALLERY</h1>
+        <nav className="main-nav">
+            <button onClick={() => setViewMode('gallery')} className={viewMode === 'gallery' ? 'active' : ''}>Gallery</button>
+            <button onClick={() => setViewMode('admin')} className={viewMode === 'admin' ? 'active' : ''}>Manage Artworks</button>
+        </nav>
       </header>
       <main>
-        {renderView()}
+        {viewMode === 'gallery' ? renderGalleryView() : <AdminPanel artworks={artworks} onAdd={handleAddArtwork} onEdit={handleEditArtwork} onDelete={handleDeleteArtwork} />}
       </main>
+      {isModalOpen && <ArtworkFormModal artwork={editingArtwork} onSave={handleSaveArtwork} onCancel={() => setIsModalOpen(false)} />}
     </>
   );
 }
