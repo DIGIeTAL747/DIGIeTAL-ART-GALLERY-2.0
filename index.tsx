@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
-import { GoogleGenAI } from "@google/genai";
 import type { GenerateContentResponse } from "@google/genai";
 
 // Data moved from data.ts to resolve browser import issue
@@ -146,14 +145,16 @@ const ArtworkDetail = ({ artwork, onPlaceOrder, onBack }: { artwork: Artwork, on
     setError('');
     setCritique('');
 
-    const apiKey = process.env.API_KEY;
-    if (!apiKey) {
-      setError('API key is not configured. This feature is currently disabled.');
-      setIsLoadingCritique(false);
-      return;
-    }
-
     try {
+      const { GoogleGenAI } = await import('@google/genai');
+      
+      const apiKey = process.env.API_KEY;
+      if (!apiKey) {
+        setError('API key is not configured. This feature is currently disabled.');
+        setIsLoadingCritique(false);
+        return;
+      }
+      
       const ai = new GoogleGenAI({ apiKey: apiKey });
       
       const imageResponse = await fetch(artwork.imageUrl);
