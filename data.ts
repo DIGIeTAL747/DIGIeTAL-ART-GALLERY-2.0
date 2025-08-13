@@ -1,11 +1,20 @@
-export const mockArtworks = [
+export interface Artwork {
+  id: string;
+  title: string;
+  artist: string;
+  description: string;
+  price: string;
+  imageUrl: string;
+}
+
+export const mockArtworks: Artwork[] = [
   {
     id: '1',
     title: 'Aloe Vera',
     artist: 'Diony Villamor Jr',
     description: '66 in. x 80 in.',
     price: '500',
-    imageUrl: 'https://imgur.com/U35hBPZ.jpeg',
+    imageUrl: 'https://i.imgur.com/U35hBPZ.jpeg',
   },
   {
     id: '2',

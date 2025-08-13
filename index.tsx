@@ -1,10 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { GoogleGenAI } from "@google/genai";
 import type { GenerateContentResponse } from "@google/genai";
 
-// --- MOCK DATA ---
-const mockArtworks = [
+// Data moved from data.ts to resolve browser import issue
+interface Artwork {
+  id: string;
+  title: string;
+  artist: string;
+  description: string;
+  price: string;
+  imageUrl: string;
+}
+
+const mockArtworks: Artwork[] = [
   {
     id: '1',
     title: 'Aloe Vera',
@@ -104,9 +113,10 @@ const mockArtworks = [
   }
 ];
 
+
 // --- COMPONENTS ---
 
-const ArtworkList = ({ artworks, onSelectArtwork }) => {
+const ArtworkList = ({ artworks, onSelectArtwork }: { artworks: Artwork[], onSelectArtwork: (artwork: Artwork) => void }) => {
   return (
     <div>
       <h2>Current Exhibition</h2>
@@ -126,7 +136,7 @@ const ArtworkList = ({ artworks, onSelectArtwork }) => {
   );
 };
 
-const ArtworkDetail = ({ artwork, onPlaceOrder, onBack }) => {
+const ArtworkDetail = ({ artwork, onPlaceOrder, onBack }: { artwork: Artwork, onPlaceOrder: () => void, onBack: () => void }) => {
   const [critique, setCritique] = useState('');
   const [isLoadingCritique, setIsLoadingCritique] = useState(false);
   const [error, setError] = useState('');
@@ -208,7 +218,7 @@ const ArtworkDetail = ({ artwork, onPlaceOrder, onBack }) => {
   );
 };
 
-const OrderForm = ({ artwork, onSubmitOrder, onBack }) => {
+const OrderForm = ({ artwork, onSubmitOrder, onBack }: { artwork: Artwork, onSubmitOrder: (details: object) => void, onBack: () => void }) => {
   const [customerName, setCustomerName] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [shippingAddress, setShippingAddress] = useState('');
@@ -246,7 +256,7 @@ const OrderForm = ({ artwork, onSubmitOrder, onBack }) => {
   );
 };
 
-const OrderConfirmation = ({ onBackToHome }) => {
+const OrderConfirmation = ({ onBackToHome }: { onBackToHome: () => void }) => {
   return (
     <div className="confirmation-container">
       <h2>Order Confirmed!</h2>
@@ -256,7 +266,13 @@ const OrderConfirmation = ({ onBackToHome }) => {
   );
 };
 
-const ArtworkFormModal = ({ artwork, onSave, onCancel }) => {
+interface ArtworkFormModalProps {
+  artwork: Artwork | null;
+  onSave: (artwork: Artwork) => void;
+  onCancel: () => void;
+}
+
+const ArtworkFormModal = ({ artwork, onSave, onCancel }: ArtworkFormModalProps) => {
   const [formData, setFormData] = useState({
     title: '',
     artist: '',
@@ -265,6 +281,8 @@ const ArtworkFormModal = ({ artwork, onSave, onCancel }) => {
     imageUrl: '',
   });
   const [imagePreview, setImagePreview] = useState('');
+  const modalRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (artwork) {
@@ -276,13 +294,57 @@ const ArtworkFormModal = ({ artwork, onSave, onCancel }) => {
     }
   }, [artwork]);
 
-  const handleChange = (e) => {
+  useEffect(() => {
+    triggerRef.current = document.activeElement as HTMLElement;
+    const firstInput = modalRef.current?.querySelector('input, button, textarea');
+    if (firstInput) {
+        (firstInput as HTMLElement).focus();
+    }
+    
+    const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+            onCancel();
+            return;
+        }
+        if (e.key === 'Tab') {
+            const focusableElements = modalRef.current?.querySelectorAll<HTMLElement>(
+              'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+            );
+            if (!focusableElements) return;
+
+            const firstElement = focusableElements[0];
+            const lastElement = focusableElements[focusableElements.length - 1];
+
+            if (e.shiftKey) { 
+                if (document.activeElement === firstElement) {
+                    lastElement.focus();
+                    e.preventDefault();
+                }
+            } else { 
+                if (document.activeElement === lastElement) {
+                    firstElement.focus();
+                    e.preventDefault();
+                }
+            }
+        }
+    };
+    
+    const modalElement = modalRef.current;
+    modalElement?.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+        modalElement?.removeEventListener('keydown', handleKeyDown);
+        triggerRef.current?.focus();
+    };
+  }, [onCancel]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target;
     setFormData({ ...formData, [id]: value });
   };
   
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -294,7 +356,7 @@ const ArtworkFormModal = ({ artwork, onSave, onCancel }) => {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!formData.title || !formData.artist || !formData.price || !formData.imageUrl) {
         alert("Please fill out all fields and upload an image.");
@@ -305,10 +367,17 @@ const ArtworkFormModal = ({ artwork, onSave, onCancel }) => {
 
   return (
     <div className="modal-backdrop" onClick={onCancel}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+      <div 
+        ref={modalRef}
+        className="modal-content" 
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
+      >
         <div className="modal-header">
-          <h2>{artwork ? 'Edit Artwork' : 'Add New Artwork'}</h2>
-          <button onClick={onCancel} className="close-button">&times;</button>
+          <h2 id="modal-title">{artwork ? 'Edit Artwork' : 'Add New Artwork'}</h2>
+          <button onClick={onCancel} className="close-button" aria-label="Close modal">&times;</button>
         </div>
         <form onSubmit={handleSubmit} noValidate className="modal-form">
           <label htmlFor="title">Title:</label>
@@ -338,7 +407,7 @@ const ArtworkFormModal = ({ artwork, onSave, onCancel }) => {
 };
 
 
-const AdminPanel = ({ artworks, onAdd, onEdit, onDelete }) => {
+const AdminPanel = ({ artworks, onAdd, onEdit, onDelete }: { artworks: Artwork[], onAdd: () => void, onEdit: (artwork: Artwork) => void, onDelete: (id: string) => void }) => {
     return (
         <div className="admin-panel">
             <div className="admin-header">
@@ -354,8 +423,8 @@ const AdminPanel = ({ artworks, onAdd, onEdit, onDelete }) => {
                             <p>by {artwork.artist}</p>
                         </div>
                         <div className="admin-list-item-actions">
-                            <button onClick={() => onEdit(artwork)} className="edit-btn">Edit</button>
-                            <button onClick={() => onDelete(artwork.id)} className="delete-btn">Delete</button>
+                            <button onClick={() => onEdit(artwork)} className="edit-btn" aria-label={`Edit ${artwork.title}`}>Edit</button>
+                            <button onClick={() => onDelete(artwork.id)} className="delete-btn" aria-label={`Delete ${artwork.title}`}>Delete</button>
                         </div>
                     </div>
                 ))}
@@ -366,13 +435,13 @@ const AdminPanel = ({ artworks, onAdd, onEdit, onDelete }) => {
 
 
 function App() {
-  const [artworks, setArtworks] = useState([]);
-  const [selectedArtwork,  setSelectedArtwork] = useState(null);
+  const [artworks, setArtworks] = useState<Artwork[]>([]);
+  const [selectedArtwork,  setSelectedArtwork] = useState<Artwork | null>(null);
   const [appState, setAppState] = useState('galleryList'); // galleryList, galleryDetail, orderForm, orderConfirmation
   const [viewMode, setViewMode] = useState('gallery'); // gallery, admin
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingArtwork, setEditingArtwork] = useState(null);
+  const [editingArtwork, setEditingArtwork] = useState<Artwork | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -393,12 +462,12 @@ function App() {
     }, 1000);
   }, []);
 
-  const updateAndStoreArtworks = (newArtworks) => {
+  const updateAndStoreArtworks = (newArtworks: Artwork[]) => {
     setArtworks(newArtworks);
     localStorage.setItem('artworks', JSON.stringify(newArtworks));
   };
   
-  const handleSelectArtwork = (artwork) => {
+  const handleSelectArtwork = (artwork: Artwork) => {
     setSelectedArtwork(artwork);
     setAppState('galleryDetail');
   };
@@ -437,19 +506,19 @@ function App() {
     setIsModalOpen(true);
   };
   
-  const handleEditArtwork = (artwork) => {
+  const handleEditArtwork = (artwork: Artwork) => {
     setEditingArtwork(artwork);
     setIsModalOpen(true);
   };
   
-  const handleDeleteArtwork = (artworkId) => {
+  const handleDeleteArtwork = (artworkId: string) => {
     if (window.confirm("Are you sure you want to delete this artwork?")) {
         const updatedArtworks = artworks.filter(a => a.id !== artworkId);
         updateAndStoreArtworks(updatedArtworks);
     }
   };
   
-  const handleSaveArtwork = (artworkToSave) => {
+  const handleSaveArtwork = (artworkToSave: Artwork) => {
     const index = artworks.findIndex(a => a.id === artworkToSave.id);
     if (index > -1) {
         const updatedArtworks = [...artworks];
@@ -475,9 +544,9 @@ function App() {
       case 'galleryList':
         return <ArtworkList artworks={artworks} onSelectArtwork={handleSelectArtwork} />;
       case 'galleryDetail':
-        return <ArtworkDetail artwork={selectedArtwork} onPlaceOrder={handlePlaceOrderClick} onBack={handleBackToList} />;
+        return <ArtworkDetail artwork={selectedArtwork!} onPlaceOrder={handlePlaceOrderClick} onBack={handleBackToList} />;
       case 'orderForm':
-        return <OrderForm artwork={selectedArtwork} onSubmitOrder={handleSubmitOrder} onBack={handleBackToDetail} />;
+        return <OrderForm artwork={selectedArtwork!} onSubmitOrder={handleSubmitOrder} onBack={handleBackToDetail} />;
       case 'orderConfirmation':
         return <OrderConfirmation onBackToHome={handleBackToHome} />;
       default:
