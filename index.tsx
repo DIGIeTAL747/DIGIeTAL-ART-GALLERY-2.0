@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { GoogleGenAI } from "@google/genai";
@@ -147,8 +146,15 @@ const ArtworkDetail = ({ artwork, onPlaceOrder, onBack }: { artwork: Artwork, on
     setError('');
     setCritique('');
 
+    const apiKey = process.env.API_KEY;
+    if (!apiKey) {
+      setError('API key is not configured. This feature is currently disabled.');
+      setIsLoadingCritique(false);
+      return;
+    }
+
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const ai = new GoogleGenAI({ apiKey: apiKey });
       
       const imageResponse = await fetch(artwork.imageUrl);
       if (!imageResponse.ok) {
