@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { GoogleGenAI } from "@google/genai";
@@ -142,11 +143,6 @@ const ArtworkDetail = ({ artwork, onPlaceOrder, onBack }: { artwork: Artwork, on
   const [error, setError] = useState('');
 
   const handleGetCritique = async () => {
-    if (!process.env.API_KEY) {
-      setError("API key is not set. Please configure it in your environment.");
-      return;
-    }
-
     setIsLoadingCritique(true);
     setError('');
     setCritique('');
